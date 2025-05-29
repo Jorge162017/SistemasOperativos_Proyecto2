@@ -3,25 +3,33 @@
 # Carné: 221038
 # Universidad del Valle de Guatemala
 
+from typing import Union
+from io import TextIOWrapper
+
 class Proceso:
     def __init__(self, pid: str, bt: int, at: int, priority: int):
-        # Inicializa un proceso con sus atributos básicos y estados
         self.pid = pid  # ID del proceso
         self.bt = int(bt)  # Burst Time
         self.at = int(at)  # Arrival Time
-        self.priority = int(priority)  # Prioridad (menor número = mayor prioridad)
+        self.priority = int(priority)  # Prioridad
 
         self.remaining = int(bt)  # Tiempo restante (para RR y SRT)
         self.start_time = None  # Tiempo de inicio de ejecución
         self.end_time = None  # Tiempo de fin de ejecución
-        self.first_run = True  # Marca primer ciclo (RR, SRT)
-        self.finished = False  # Indica si terminó el proceso
+        self.first_run = True  # Marca si ya se ejecutó al menos una vez
+        self.finished = False  # Estado finalizado
 
-def leer_procesos(path: str) -> list[Proceso]:
-    # Lee un archivo de texto y devuelve una lista de objetos Proceso
-    # Formato por línea: <PID>, <BT>, <AT>, <Priority>
+def leer_procesos(path_or_file: Union[str, TextIOWrapper]) -> list[Proceso]:
     procesos = []
-    with open(path, "r") as f:
+
+    if isinstance(path_or_file, str):
+        f = open(path_or_file, "r")
+        close_after = True
+    else:
+        f = TextIOWrapper(path_or_file) if not isinstance(path_or_file, TextIOWrapper) else path_or_file
+        close_after = False
+
+    with f:
         for linea in f:
             if linea.strip():
                 try:
@@ -29,21 +37,26 @@ def leer_procesos(path: str) -> list[Proceso]:
                     procesos.append(Proceso(pid.strip(), bt.strip(), at.strip(), pr.strip()))
                 except ValueError:
                     print(f"Error: línea mal formateada: {linea.strip()}")
+
+    if close_after:
+        f.close()
+
     return procesos
 
 def calcular_metricas(procesos: list[Proceso]) -> tuple[float, float]:
-    # Calcula métricas promedio para un conjunto de procesos:
-    # - Waiting Time (WT) = Start Time - Arrival Time
-    # - Turnaround Time (TAT) = End Time - Arrival Time
     total_wt = 0
     total_tat = 0
-    n = len(procesos)
+    n = 0
 
     for p in procesos:
+        if p.start_time is None or p.end_time is None:
+            continue  # Omitir procesos incompletos
+
         wt = p.start_time - p.at
         tat = p.end_time - p.at
         total_wt += wt
         total_tat += tat
+        n += 1
 
     avg_wt = total_wt / n if n > 0 else 0
     avg_tat = total_tat / n if n > 0 else 0

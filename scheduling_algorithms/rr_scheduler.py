@@ -1,27 +1,25 @@
-#Simulador Round Robin (RR)
-#Autor: Jorge Lopez
-#Carné: 221038
-#Universidad del Valle de Guatemala
+# Simulador Round Robin (RR)
+# Autor: Jorge Lopez
+# Carné: 221038
+# Universidad del Valle de Guatemala
 
 class Process:
-    def __init__(self, pid, burst_time, arrival_time, priority=0):
+    def __init__(self, pid, bt, at, priority=0):
         self.pid = pid
-        self.burst_time = burst_time
-        self.arrival_time = arrival_time
+        self.bt = bt
+        self.at = at
         self.priority = priority
         self.start_time = None
-        self.finish_time = None
-        self.remaining_time = burst_time
+        self.end_time = None
+        self.remaining = bt
         self.first_run = True
         self.finished = False
 
 def round_robin_scheduler(process_list, quantum):
-    
-    #Algoritmo Round Robin con quantum fijo.
-    #Reparte tiempo de CPU equitativamente entre los procesos.
-    
-    # Ordenamos procesos por tiempo de llegada
-    process_list = sorted(process_list, key=lambda p: p.arrival_time)
+    # Algoritmo Round Robin con quantum fijo.
+    # Reparte tiempo de CPU equitativamente entre los procesos.
+
+    process_list = sorted(process_list, key=lambda p: p.at)
 
     time = 0
     queue = []
@@ -31,41 +29,35 @@ def round_robin_scheduler(process_list, quantum):
     index = 0
 
     while completed < n:
-        # Añadir a la cola los procesos que hayan llegado hasta el tiempo actual
-        while index < n and process_list[index].arrival_time <= time:
+        # Agregar a la cola procesos que hayan llegado hasta ahora
+        while index < n and process_list[index].at <= time:
             queue.append(process_list[index])
             index += 1
 
         if not queue:
-            # Si no hay procesos en la cola, avanzar el tiempo
             time += 1
             continue
 
         current = queue.pop(0)
 
-        # Registrar tiempo de inicio en la primera ejecución
         if current.first_run:
             current.start_time = time
             current.first_run = False
 
-        # Ejecutar proceso por el tiempo mínimo entre quantum y tiempo restante
-        exec_time = min(quantum, current.remaining_time)
+        exec_time = min(quantum, current.remaining)
         time += exec_time
-        current.remaining_time -= exec_time
+        current.remaining -= exec_time
 
-        # Añadir nuevos procesos que llegaron mientras se ejecutaba el proceso actual
-        while index < n and process_list[index].arrival_time <= time:
+        while index < n and process_list[index].at <= time:
             queue.append(process_list[index])
             index += 1
 
-        if current.remaining_time > 0:
-            # Si el proceso no terminó, vuelve al final de la cola
+        if current.remaining > 0:
             queue.append(current)
         else:
-            # Proceso finalizado
-            current.finish_time = time
+            current.end_time = time
             current.finished = True
             scheduled_order.append(current)
             completed += 1
 
-    return scheduled_order
+    return scheduled_order, None  # Devuelve también timeline=None por consistencia con otros schedulers
