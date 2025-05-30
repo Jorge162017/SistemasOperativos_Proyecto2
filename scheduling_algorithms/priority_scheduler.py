@@ -6,42 +6,35 @@
 class Process:
     def __init__(self, pid, bt, at, priority):
         self.pid = pid
-        self.bt = bt
-        self.at = at
-        self.priority = priority
+        self.bt = int(bt)
+        self.at = int(at)
+        self.priority = int(priority)
         self.start_time = None
         self.finish_time = None
+        self.end_time = None  # 👈 necesario para que se muestre en las gráficas
+        self.remaining_time = int(bt)
+        self.first_run = True
         self.finished = False
 
 def priority_scheduler(process_list):
-    # Algoritmo de planificación por prioridad no expropiativa.
-    # En cada ciclo selecciona el proceso disponible con mayor prioridad (menor valor).
-    
-    # Ordenamos por tiempo de llegada para control
     process_list = sorted(process_list, key=lambda proc: proc.at)
     
     time = 0
     completed = 0
     n = len(process_list)
-    scheduled_order = []
 
     while completed < n:
-        # Procesos disponibles: llegaron y no han terminado
         available = [p for p in process_list if p.at <= time and not p.finished]
 
         if available:
-            # Seleccionar proceso con prioridad más alta (menor valor), y si hay empate, el que llegó primero
             current = min(available, key=lambda p: (p.priority, p.at))
-            
             current.start_time = time
             time += current.bt
             current.finish_time = time
+            current.end_time = time  # 👈 necesario para la animación
             current.finished = True
-
-            scheduled_order.append(current)
             completed += 1
         else:
-            # Si no hay procesos disponibles, avanzar el tiempo
             time += 1
 
-    return scheduled_order
+    return sorted(process_list, key=lambda p: p.start_time)

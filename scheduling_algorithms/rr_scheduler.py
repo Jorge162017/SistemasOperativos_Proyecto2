@@ -6,30 +6,25 @@
 class Process:
     def __init__(self, pid, bt, at, priority=0):
         self.pid = pid
-        self.bt = bt
-        self.at = at
-        self.priority = priority
+        self.bt = int(bt)
+        self.at = int(at)
+        self.priority = int(priority)
         self.start_time = None
         self.end_time = None
-        self.remaining = bt
+        self.remaining = int(bt)
         self.first_run = True
         self.finished = False
 
 def round_robin_scheduler(process_list, quantum):
-    # Algoritmo Round Robin con quantum fijo.
-    # Reparte tiempo de CPU equitativamente entre los procesos.
-
     process_list = sorted(process_list, key=lambda p: p.at)
-
     time = 0
     queue = []
     completed = 0
     n = len(process_list)
-    scheduled_order = []
+    timeline = []
     index = 0
 
     while completed < n:
-        # Agregar a la cola procesos que hayan llegado hasta ahora
         while index < n and process_list[index].at <= time:
             queue.append(process_list[index])
             index += 1
@@ -45,6 +40,8 @@ def round_robin_scheduler(process_list, quantum):
             current.first_run = False
 
         exec_time = min(quantum, current.remaining)
+        timeline.append((current.pid, time, time + exec_time))
+
         time += exec_time
         current.remaining -= exec_time
 
@@ -57,7 +54,6 @@ def round_robin_scheduler(process_list, quantum):
         else:
             current.end_time = time
             current.finished = True
-            scheduled_order.append(current)
             completed += 1
 
-    return scheduled_order, None  # Devuelve también timeline=None por consistencia con otros schedulers
+    return process_list, timeline
