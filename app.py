@@ -11,7 +11,7 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
-from scheduling_algorithms.funcs import leer_procesos, calcular_metricas
+from scheduling_algorithms.funcs import leer_procesos, calcular_metricas, generar_tabla_resultados
 from scheduling_algorithms.fifo_scheduler import fifo_scheduler
 from scheduling_algorithms.sjf_scheduler import sjf_scheduler
 from scheduling_algorithms.srt_scheduler import srt_scheduler
@@ -58,7 +58,6 @@ def simular_tiempo_real(procesos):
     ax.set_xlabel('Tiempo')
     ax.set_title('Animación en tiempo real')
     ax.grid(True)
-    barras = []
     colores = {}
     placeholders = [ax.text(-1, i, p.pid, va='center', fontsize=10, fontweight='bold') for i, p in enumerate(procesos)]
     plot = st.pyplot(fig)
@@ -166,6 +165,12 @@ def main():
                         st.metric("⏱️ Tiempo de espera promedio", f"{avg_wt:.2f}")
                         st.metric("⏳ Turnaround time promedio", f"{avg_tat:.2f}")
                         dibujar_gantt(procesos_res, nombre, st.session_state.colors)
+
+                        # Nueva tabla por proceso
+                        tabla_resultados = generar_tabla_resultados(procesos_res)
+                        if tabla_resultados is not None:
+                            st.subheader("📋 Tabla de resultados por proceso")
+                            st.dataframe(tabla_resultados, use_container_width=True)
 
     else:
         st.subheader("🔐 Cargar archivos de sincronización")
