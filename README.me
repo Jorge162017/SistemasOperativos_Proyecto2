@@ -1,11 +1,61 @@
 # Simulador de Planificación y Sincronización
 
-Proyecto desarrollado para la clase de Sistemas Operativos en la Universidad del Valle de Guatemala.
+**Proyecto para la clase de Sistemas Operativos**  
+**Universidad del Valle de Guatemala**
 
-Autor: Jorge Lopez  
-Carné: 221038
+**Autor:** Jorge López  
+**Carné:** 221038
 
-Este proyecto simula algoritmos de planificación de procesos y mecanismos de sincronización utilizando Python.  
-Incluye una interfaz gráfica para visualizar las simulaciones dinámicamente.
+## Descripción
 
----
+Este proyecto simula algoritmos de planificación de procesos (FIFO, SJF, SRT, Round Robin, Priority) y mecanismos de sincronización (Mutex y Semáforo). La simulación se realiza con una interfaz interactiva desarrollada con Streamlit que permite visualizar animaciones, métricas, y resúmenes de ejecución.
+
+## Requisitos
+
+- Python 3.9 o superior
+- Streamlit
+- matplotlib
+- pandas
+
+Instalación de dependencias:
+
+```bash
+pip install -r requirements.txt
+```
+
+## Ejecución
+
+Para ejecutar la aplicación:
+
+```bash
+streamlit run app.py
+```
+
+## Archivos de entrada
+
+### Calendarización
+- `procesos.txt`: archivo de texto con procesos en formato:  
+  `PID, BT, AT, PRIORIDAD`
+
+### Sincronización
+- `procesos.txt`: lista de procesos
+- `recursos.txt`: definición de recursos y cantidades disponibles
+- `acciones.txt`: acciones de acceso a recursos (READ, WRITE, WAIT, SIGNAL)
+
+## Formatos esperados
+
+- **procesos.txt**  
+  `P1, 8, 0, 1`
+
+- **recursos.txt**  
+  `R1, 1`
+
+- **acciones.txt**  
+  `P1, WRITE, R1, 0`
+
+## Vista del simulador
+
+- Diagrama de Gantt por algoritmo.
+- Animación de ejecución en tiempo real.
+- Tabla con resumen de resultados por proceso.
+- Animación ciclo por ciclo para sincronización con estados: ACCESSED, WAITING y DONE.
