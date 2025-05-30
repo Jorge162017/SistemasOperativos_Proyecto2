@@ -1,58 +1,50 @@
-# semaphore_mechanism.py
-# Simulador del mecanismo de Semáforos
-# Autor: Jorge Lopez
-# Carné: 221038
-# Universidad del Valle de Guatemala
-
 class SemaforoSimulador:
     def __init__(self, procesos, recursos, acciones):
-        # Diccionario de procesos por PID para acceso rápido
         self.procesos = {p.pid: p for p in procesos}
-        # Diccionario de recursos por nombre
         self.recursos = recursos
-        # Lista de acciones a ejecutar (cada acción con ciclo, pid, tipo, recurso)
         self.acciones = acciones
-        # Ciclo actual de la simulación
         self.ciclo = 0
+        self.acciones_pendientes = list(acciones)
+        self.waiting_since = {}
 
     def ejecutar(self):
-        # Tiempo máximo para ejecutar (ciclo máximo entre acciones + margen)
-        tiempo_total = max(a.ciclo for a in self.acciones) + 10
+        tiempo_total = max(a.ciclo for a in self.acciones) + 20  # margen adicional
 
         while self.ciclo <= tiempo_total:
-            # Obtener todas las acciones que ocurren en el ciclo actual
-            acciones_en_ciclo = [a for a in self.acciones if a.ciclo == self.ciclo]
+            nuevas_acciones = [a for a in self.acciones_pendientes if a.ciclo == self.ciclo]
+            self.acciones_pendientes = [a for a in self.acciones_pendientes if a not in nuevas_acciones]
 
-            for accion in acciones_en_ciclo:
+            for accion in nuevas_acciones:
                 proceso = self.procesos[accion.pid]
                 recurso = self.recursos[accion.recurso]
 
-                # Procesar acciones WAIT, WRITE o READ
                 if accion.tipo in ["WAIT", "WRITE", "READ"]:
                     if recurso.contador > 0:
-                        # Recurso disponible: proceso accede y ocupa el recurso
                         recurso.contador -= 1
                         proceso.estado = "ACCESSED"
                         proceso.historial.append((self.ciclo, "ACCESSED"))
+                        self.waiting_since.pop(proceso.pid, None)
                     else:
-                        # Recurso no disponible: proceso espera
                         proceso.estado = "WAITING"
                         proceso.historial.append((self.ciclo, "WAITING"))
-                        recurso.cola_espera.append(proceso)
+                        self.waiting_since[proceso.pid] = self.ciclo
+                        recurso.cola_espera.append((proceso, self.ciclo))
 
-                # Procesar acción SIGNAL (liberar recurso)
                 elif accion.tipo == "SIGNAL":
                     recurso.contador += 1
-                    # Si hay procesos en espera, asignar recurso al primero
-                    if recurso.cola_espera:
-                        siguiente = recurso.cola_espera.pop(0)
-                        siguiente.estado = "ACCESSED"
-                        siguiente.historial.append((self.ciclo, "ACCESSED"))
-                        recurso.contador -= 1
+                    nueva_cola = []
+                    for proceso, ciclo_espera in recurso.cola_espera:
+                        if self.ciclo - ciclo_espera >= 1 and recurso.contador > 0:
+                            recurso.contador -= 1
+                            proceso.estado = "ACCESSED"
+                            proceso.historial.append((self.ciclo, "ACCESSED"))
+                            self.waiting_since.pop(proceso.pid, None)
+                        else:
+                            nueva_cola.append((proceso, ciclo_espera))
+                    recurso.cola_espera = nueva_cola
 
             self.ciclo += 1
 
-        # Al finalizar, marcar procesos que accedieron como terminados
         for p in self.procesos.values():
             if p.estado == "ACCESSED":
                 p.estado = "DONE"

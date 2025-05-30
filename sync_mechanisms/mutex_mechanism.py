@@ -1,57 +1,53 @@
-# Simulador del mecanismo Mutex
-# Autor: Jorge Lopez
-# Carné: 221038
-# Universidad del Valle de Guatemala
-
 class MutexSimulador:
     def __init__(self, procesos, recursos, acciones):
-        # Diccionario de procesos por PID para acceso rápido
         self.procesos = {p.pid: p for p in procesos}
-        # Diccionario de recursos por nombre
         self.recursos = recursos
-        # Lista de acciones a ejecutar (cada acción con ciclo, pid, tipo, recurso)
         self.acciones = acciones
-        # Ciclo actual de la simulación
         self.ciclo = 0
-        # Conjunto de procesos finalizados (puede usarse para métricas o control)
         self.finalizados = set()
+        self.acciones_pendientes = list(acciones)  # Cola mutable
+        self.waiting_since = {}  # Registro del ciclo en que empezó a esperar
 
     def ejecutar(self):
-        # Tiempo máximo para ejecutar (ciclo máximo entre acciones + margen)
-        tiempo_total = max(a.ciclo for a in self.acciones) + 10
+        tiempo_total = max(a.ciclo for a in self.acciones) + 20  # Margen mayor
 
         while self.ciclo <= tiempo_total:
-            # Obtener todas las acciones que ocurren en el ciclo actual
-            acciones_en_ciclo = [a for a in self.acciones if a.ciclo == self.ciclo]
+            # Verificar acciones nuevas o pendientes
+            nuevas_acciones = [a for a in self.acciones_pendientes if a.ciclo == self.ciclo]
+            self.acciones_pendientes = [a for a in self.acciones_pendientes if a not in nuevas_acciones]
 
-            for accion in acciones_en_ciclo:
+            for accion in nuevas_acciones:
                 proceso = self.procesos[accion.pid]
                 recurso = self.recursos[accion.recurso]
 
-                # Solo procesar acciones de lectura o escritura
                 if accion.tipo in ["READ", "WRITE"]:
                     if recurso.contador > 0:
-                        # Recurso disponible: proceso accede y ocupa el recurso
                         recurso.contador -= 1
                         proceso.estado = "ACCESSED"
                         proceso.historial.append((self.ciclo, "ACCESSED"))
+                        self.waiting_since.pop(proceso.pid, None)  # Limpia si estaba esperando
                     else:
-                        # Recurso no disponible: proceso debe esperar
                         proceso.estado = "WAITING"
                         proceso.historial.append((self.ciclo, "WAITING"))
-                        recurso.cola_espera.append(proceso)
+                        self.waiting_since[proceso.pid] = self.ciclo
+                        recurso.cola_espera.append((proceso, self.ciclo))  # Guarda ciclo de espera
 
-            # Al finalizar el ciclo, liberar recursos y asignar al siguiente en cola
+            # Liberación y reintento de recursos
             for recurso in self.recursos.values():
-                if recurso.cola_espera:
-                    siguiente = recurso.cola_espera.pop(0)
-                    recurso.contador -= 1
-                    siguiente.estado = "ACCESSED"
-                    siguiente.historial.append((self.ciclo, "ACCESSED"))
+                nueva_cola = []
+                for proceso, ciclo_espera in recurso.cola_espera:
+                    if self.ciclo - ciclo_espera >= 1 and recurso.contador > 0:
+                        recurso.contador -= 1
+                        proceso.estado = "ACCESSED"
+                        proceso.historial.append((self.ciclo, "ACCESSED"))
+                        self.waiting_since.pop(proceso.pid, None)
+                    else:
+                        nueva_cola.append((proceso, ciclo_espera))
+                recurso.cola_espera = nueva_cola
 
             self.ciclo += 1
 
-        # Marcar los procesos que accedieron como terminados al finalizar la simulación
+        # Marcar como DONE al final
         for p in self.procesos.values():
             if p.estado == "ACCESSED":
                 p.estado = "DONE"

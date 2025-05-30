@@ -10,6 +10,8 @@ import time
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+from collections import Counter
+import pandas as pd
 
 from scheduling_algorithms.funcs import leer_procesos, calcular_metricas, generar_tabla_resultados
 from scheduling_algorithms.fifo_scheduler import fifo_scheduler
@@ -84,24 +86,54 @@ def simular_tiempo_real(procesos):
     st.success("✅ Simulación completa")
 
 def dibujar_sync(resultado, tipo):
-    fig, ax = plt.subplots(figsize=(12, max(len(resultado) * 0.6, 3)))
-    escala = 1
-    for i, p in enumerate(resultado):
-        for ciclo, estado in p.historial:
-            color = '#27ae60' if estado == "ACCESSED" else '#c0392b'
-            ax.broken_barh([(ciclo, escala)], (i - 0.4, 0.8), facecolors=color)
-        ax.text(-1, i, p.pid, va='center', fontsize=10, fontweight='bold')
+    import matplotlib.patches as mpatches
 
-    ax.set_yticks([])
+    st.subheader("🟢 Animación ciclo por ciclo")
+
+    fig, ax = plt.subplots(figsize=(12, max(len(resultado) * 0.6, 3)))
+    ax.set_xlim(0, max(max(c for c, _ in p.historial) for p in resultado) + 2)
+    ax.set_ylim(-1, len(resultado))
     ax.set_xlabel('Ciclos')
     ax.set_title(f'Sincronización ({tipo})')
     ax.grid(True)
-    st.pyplot(fig)
 
+    colores = {"ACCESSED": "#27ae60", "WAITING": "#c0392b", "DONE": "#2980b9"}
+    plot = st.pyplot(fig)
+
+    for ciclo in range(0, 100):  # máximo 100 ciclos para evitar bucle infinito
+        updated = False
+        for i, p in enumerate(resultado):
+            acciones_en_ciclo = [(c, estado) for c, estado in p.historial if c == ciclo]
+            for c, estado in acciones_en_ciclo:
+                color = colores.get(estado, "#95a5a6")
+                barra = mpatches.Rectangle((c, i - 0.4), 1, 0.8, color=color)
+                ax.add_patch(barra)
+                updated = True
+        if updated:
+            plot.pyplot(fig)
+            time.sleep(0.3)
+
+def mostrar_resumen_y_animacion(resultado, tipo_sync):
+    st.subheader("📋 Resumen de estado por proceso")
+    resumen = []
+
+    for p in resultado:
+        conteo = Counter([estado for _, estado in p.historial])
+        resumen.append({
+            "Proceso": p.pid,
+            "ACCESSED": conteo.get("ACCESSED", 0),
+            "WAITING": conteo.get("WAITING", 0),
+            "DONE": conteo.get("DONE", 0),
+            "Total ciclos": len(p.historial)
+        })
+
+    st.dataframe(pd.DataFrame(resumen), use_container_width=True)
+
+    dibujar_sync(resultado, tipo_sync)
 
 def main():
     st.set_page_config(page_title="OrganizeMe Simulator - Jorge Lopez", layout="wide")
-    st.title("🧩 OrganizeMe Simulator - Jorge Lopez")
+    st.title("🚦⏳ Proyecto Simulador - Jorge Lopez")
     st.markdown("---")
 
     if "procesos" not in st.session_state:
@@ -204,7 +236,7 @@ def main():
                         estados = ", ".join([f"Ciclo {c}: {e}" for c, e in p.historial])
                         st.markdown(f"**Proceso {p.pid}**: {estados}")
 
-                    dibujar_sync(resultado, tipo_sync)
+                    mostrar_resumen_y_animacion(resultado, tipo_sync)
 
 if __name__ == "__main__":
     main()
